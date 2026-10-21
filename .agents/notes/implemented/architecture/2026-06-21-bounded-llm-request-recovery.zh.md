@@ -54,7 +54,7 @@ agent loop（智能体循环）会将终止 finish 的 `LlmFailure` 传给 `agen
 
 `agent/request-error` waterfall 携带当前 `LlmFailure`、在连续恢复序列中授权重试的不可变先前失败列表，以及提供服务的注册项所携带的不可变重试策略。循环只传递而不解释该策略；它拥有连续失败历史，并在模型请求成功后清除。`dsh-llm-retry` 的 normal 策略统计由同一项确切提供方策略安排的持久重试记录，`dsh-compaction-basic` 则维护自己的上下文溢出预算。因此，暂时性失败与上下文溢出交替出现时，会各自独立消耗其有限预算；最大请求数等于 1 加上所有已加载有限预算之和。
 
-当前配置形状见 [llm-retry README](../../../../packages/llm/llm-retry/README.zh.md)。提供方适配器会注册嵌套的 `retryPolicy`；省略时使用 normal 默认值：两次暂时性重试、500 毫秒初始延迟、10 秒延迟上限、10% 抖动，以及上述五个暂时性 code。计数与延迟边界参考了所调查实现中较保守的一端：[OpenCode 使用两次请求重试，延迟边界为 500 毫秒／10 秒](https://github.com/anomalyco/opencode/blob/9976269ab1accfc9f9dc98a4a688c516934de422/%70ackages/llm/src/route/executor.ts#L36-L39)；[Pi 将三次 agent 级重试与提供方重试分开，且提供方重试默认为零](https://github.com/earendil-works/pi/blob/3da591ab74ab9ab407e72ed882600b2c851fae21/%70ackages/coding-agent/docs/settings.md#L139-L147)；[Codex 使用有限请求／流预算以及五分钟空闲超时](https://github.com/openai/codex/blob/0fb559f0f6e231a88ac02ea002d3ecd248e2b515/codex-rs/model-provider-info/src/lib.rs#L25-L33)。10% 抖动参考 [Codex 的有界抖动](https://github.com/openai/codex/blob/0fb559f0f6e231a88ac02ea002d3ecd248e2b515/codex-rs/codex-client/src/retry.rs#L40-L47)。
+当前配置形状见 [llm-retry README](../../../../packages/llm/llm-retry/README.zh.md)。提供方适配器会注册嵌套的 `retryPolicy`；省略时使用 normal 默认值：十次暂时性重试、500 毫秒初始延迟、10 秒延迟上限、10% 抖动，以及上述五个暂时性 code。延迟边界参考了所调查实现中较保守的一端：[OpenCode 使用两次请求重试，延迟边界为 500 毫秒／10 秒](https://github.com/anomalyco/opencode/blob/9976269ab1accfc9f9dc98a4a688c516934de422/%70ackages/llm/src/route/executor.ts#L36-L39)；[Pi 将三次 agent 级重试与提供方重试分开，且提供方重试默认为零](https://github.com/earendil-works/pi/blob/3da591ab74ab9ab407e72ed882600b2c851fae21/%70ackages/coding-agent/docs/settings.md#L139-L147)；[Codex 使用有限请求／流预算以及五分钟空闲超时](https://github.com/openai/codex/blob/0fb559f0f6e231a88ac02ea002d3ecd248e2b515/codex-rs/model-provider-info/src/lib.rs#L25-L33)。10% 抖动参考 [Codex 的有界抖动](https://github.com/openai/codex/blob/0fb559f0f6e231a88ac02ea002d3ecd248e2b515/codex-rs/codex-client/src/retry.rs#L40-L47)。
 
 对于预算未耗尽的合格失败，从 1 开始的暂时性重试计数使用有界指数退避。有效的 `providerRetryAfterMs` 只有在不超过 `maxDelayMs` 时才会取代指数退避；提供方延迟更长时，系统会委托给下一监听器，而不会违反提供方指令提前重试。本地退避乘以 `[1 - jitterRatio, 1 + jitterRatio]` 内的注入随机因子，并将最终值限制到 `maxDelayMs`；提供方延迟不加抖动。
 
@@ -65,6 +65,10 @@ agent loop（智能体循环）会将终止 finish 的 `LlmFailure` 传给 `agen
 对非暂时性 code、耗尽的策略预算或超出上限的提供方延迟，监听器会调用 `next()`。这保留了与上下文溢出恢复及后续策略插件的组合能力。对自身处理的失败，它会记录并等待延迟，然后在不委托的情况下返回 `{ kind: 'retry' }`。轮次取消和插件 dispose 会结束等待且不返回重试动作，此后仍以循环的取消／dispose 检查为准。
 
 `dsh-base` 与 `dsh-sdk-minimal` patch 将该插件作为显式配置行加载，因此基于 base 的 profile 与独立 SDK profile 使用同一套按提供方路由的策略。库消费方仍需显式组合插件：省略该插件时，请求失败保持终态。
+
+### 默认把暂时性重试预算设为十次请求
+
+normal mode 对同一条提供方与模型路由最多发起十一次提供方请求：第一次尝试加上十次暂时性重试。这个预算有意高于 OpenCode 使用的两次请求重试，因为一次 harness 会话可能让同一条提供方路由持续忙碌数小时，长轮次中间出现的限流或传输错误会在预算用尽时直接结束该轮次。次数仍然有限，沿用同样的 500 毫秒到 10 秒有界退避与 10% 抖动；需要更少尝试次数的部署可以显式设置 `retryPolicy.maxRetries`，它会覆盖这个默认值。
 
 ### 由单一层负责可见的尝试
 
@@ -103,6 +107,7 @@ agent loop（智能体循环）会将终止 finish 的 `LlmFailure` 传给 `agen
 - **只要调用方仍处于活跃状态就无限重试**：[按提供方配置的策略](../../archived/feature/2026-07-24-provider-retry-policies.md)对显式 `always` 配置项推翻了这项拒绝，同时保留有界的 normal mode 作为默认值。
 - **只通过进程 logger 记录重试状态**：拒绝采用，因为进程日志无法重建会话行为，也不能驱动回放后的 UI 状态。
 - **只保留扁平 code**：拒绝采用，因为重试延迟和提供方请求 id 是结构化的提供方事实，而当不同协议失败共用一个稳定 code 时，诊断还需要 HTTP 状态。
+- **把暂时性重试预算维持在五次请求**：拒绝采用，因为五次尝试在面向消费者的提供方路由上仍会结束长轮次，而需要更少尝试次数的部署可以显式设置 `retryPolicy.maxRetries`。
 
 ## 验证
 

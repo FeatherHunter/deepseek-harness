@@ -50,7 +50,7 @@ export interface Config {
   fileRefreshMarginSeconds: Volatile<number>
   /** Oldest harness-owned files deleted before one quota-recovery upload retry (default 100). */
   fileQuotaCleanupBatch: Volatile<number>
-  /** Provider-owned model-request retry policy; omission uses normal mode with five retries. */
+  /** Provider-owned model-request retry policy; omission uses normal mode with ten retries. */
   retryPolicy: Volatile<RetryPolicyConfig | undefined>
 }
 
