@@ -15,8 +15,11 @@
   en: 943322e6cdbfa440
   zh: 82288531f6194ed2
 /agent-note-bounded-recovery-for-transient-llm-request-failures/decision/put-retry-policy-on-the-existing-failed-step-extension-point:
-  en: ed4d295378d94a26
-  zh: 1fee5ef4947bac8f
+  en: 46411df49f5bde24
+  zh: f7512a08a79443cd
+/agent-note-bounded-recovery-for-transient-llm-request-failures/decision/default-the-transient-retry-budget-to-ten-requests:
+  en: df7bde11d4d5a191
+  zh: 79f8d3f6bc2a6e6d
 /agent-note-bounded-recovery-for-transient-llm-request-failures/decision/make-one-layer-own-visible-attempts:
   en: 57dbdd385f48bb3e
   zh: 5e15463fae4be582
@@ -30,8 +33,8 @@
   en: 985720529b56cda2
   zh: 8a649bfa9cd8d93f
 /agent-note-bounded-recovery-for-transient-llm-request-failures/alternatives-considered:
-  en: a6d0306740d470ee
-  zh: 700bd4b0aa58f3e8
+  en: ca504b7d2c40dfd1
+  zh: ac013274bbd8eee8
 /agent-note-bounded-recovery-for-transient-llm-request-failures/verification:
   en: 7412edfd162c4a28
   zh: 64108a11e6194e35

@@ -538,7 +538,7 @@ it('assembles the shipped Web transport, catalog, guidance, and defaults', async
       "initialDelayMs": 500,
       "jitterRatio": 0.1,
       "maxDelayMs": 10000,
-      "maxRetries": 5,
+      "maxRetries": 10,
       "mode": "normal",
       "retryableCodes": [
         "EMPTY_RESPONSE",
@@ -571,7 +571,7 @@ it('assembles the shipped Web transport, catalog, guidance, and defaults', async
       "initialDelayMs": 500,
       "jitterRatio": 0.1,
       "maxDelayMs": 10000,
-      "maxRetries": 5,
+      "maxRetries": 10,
       "mode": "normal",
       "retryableCodes": [
         "EMPTY_RESPONSE",
